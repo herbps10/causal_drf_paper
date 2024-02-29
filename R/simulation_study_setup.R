@@ -79,6 +79,109 @@ confounding_truth <- function(x) 0 * x
 effect_truth <- get_truth(simulate_effect, 8e3, 5, y = y, Xtest = Xtest)
 both_truth <- get_truth(simulate_both, 8e3, 5, y = y, Xtest = Xtest)
 
+source("https://raw.githubusercontent.com/JeffNaef/drfinference/874156b191d77b212c835cdf6f2ad9718a1ed9d2/drf-foo.R")
+
+drf_separate <- function(data, num_trees, Xtest, ci_group_size) {
+  B <- 100
+  X <- as.matrix(select(data, starts_with("X")))
+  Y <- matrix(data$Y, ncol = 1)
+  W <- as.matrix(data$W)
+
+  DRF0 <-
+    drfCI(X = X[W == 0, , drop = FALSE],
+          Y = Y[W == 0, , drop = FALSE],
+          B = B, num.trees = ci_group_size)
+  DRF1 <-
+    drfCI(X = X[W == 1, , drop = FALSE],
+          Y = Y[W == 1, , drop = FALSE],
+          B = B, num.trees = ci_group_size)
+  # predict the DRFs on testdata x
+  DRFpred0 <- predictdrf(DRF0, x = Xtest)
+  DRFpred1 <- predictdrf(DRF1, x = Xtest)
+
+  # kernel
+  bandwidth_Y <- drf:::medianHeuristic(data$Y)
+  k_Y <- rbfdot(sigma = bandwidth_Y)
+
+  DRFpred0_all <- predictdrf(DRF0, x = X)
+  DRFpred1_all <- predictdrf(DRF1, x = X)
+
+  K1 <- kernelMatrix(k_Y, Y[W == 1], y = Y[W == 1])
+  K0 <- kernelMatrix(k_Y, Y[W == 0], y = Y[W == 0])
+  K <- kernelMatrix(k_Y, Y[W == 0], y = Y[W == 1])
+
+  data$Yhat0 <- (as.matrix(DRFpred0_all$weights) %*% Y[W == 0, 1])[,1]
+  data$Yhat1 <- (as.matrix(DRFpred1_all$weights) %*% Y[W == 1, 1])[,1]
+  data$cate_hat <- data$Yhat1 - data$Yhat0
+
+  # simulated null distribution
+  nulldist <- sapply(seq_len(length(DRFpred1$weightsb)), function(j) {
+    diag(as.matrix(DRFpred0$weightsb[[j]] - DRFpred0$weights) %*% tcrossprod(K0, as.matrix(DRFpred0$weightsb[[j]] - DRFpred0$weights))) +
+      diag(as.matrix(DRFpred1$weightsb[[j]] - DRFpred1$weights) %*% tcrossprod(K1, as.matrix(DRFpred1$weightsb[[j]] - DRFpred1$weights))) -
+      2 * diag( as.matrix(DRFpred0$weightsb[[j]] - DRFpred0$weights) %*% tcrossprod(K, as.matrix(DRFpred1$weightsb[[j]] - DRFpred1$weights))) %>%
+      as.numeric()
+  })
+
+  # Choose the right quantile
+  alpha <- 0.05
+  right_quantile <- quantile(nulldist, 1 - alpha)
+
+  # witness func
+  hatmun <- function(y) {
+    Ky <- t(kernelMatrix(k_Y, Y, y = y))
+
+    K1y <- t(kernelMatrix(k_Y, Y[W == 1], y = y))
+    K0y <- t(kernelMatrix(k_Y, Y[W == 0], y = y))
+
+    return(tcrossprod(K1y, as.matrix(DRFpred1$weights)) - tcrossprod(K0y, as.matrix(DRFpred0$weights)))
+  }
+  data$witness <- hatmun(Y) %>% as.numeric()
+
+  # confidence bands for witness func
+  data$lower <- data$witness - sqrt(right_quantile)
+  data$upper <- data$witness + sqrt(right_quantile)
+
+  data %>%
+    select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
+}
+
+drf_combined <- function(data, num_trees, Xtest, ci_group_size, witness_type) {
+  X <- as.matrix(select(data, starts_with("X")))
+  Y <- matrix(data$Y, ncol = 1)
+  W <- as.matrix(data$W)
+  N <- nrow(data)
+
+  # Combined fit
+  fit <- drf_causal(X, Y, W, splitting.rule = "CausalEffectFourierMMD", num.trees = num_trees, ci.group.size = ci_group_size, num.threads = 5, response.scaling = FALSE)
+  print(fit$bandwidth)
+
+  w0 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(0, N), ncol = 1), g = rep(1, N))
+  w1 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(1, N), ncol = 1), g = rep(1, N))
+
+  data$Yhat0 <- (as.matrix(w0) %*% Y)[,1]
+  data$Yhat1 <- (as.matrix(w1) %*% Y)[,1]
+  data$cate_hat <- data$Yhat1 - data$Yhat0
+
+  if(witness_type == "original") {
+    Xtest <- matrix(c(0.7, 0.3, 0.5, 0.68, 0.43), nrow = 1)
+    witness <- predict_witness_orig(fit, alpha = 0.05, newdata = Xtest, newtreatment = matrix(1), g = rep(1, N))
+
+    data$witness <- witness[1,]
+    data$lower   <- witness[2, ]
+    data$upper   <- witness[3, ]
+  }
+  else {
+    witness <- predict_witness(fit, alpha = 0.05, g = rep(1, nrow(dat)))
+
+    data$witness <- witness[1,]
+    data$lower   <- witness[1,] + qnorm(0.025) * sqrt(witness[2, ])
+    data$upper   <- witness[1,] + qnorm(0.975) * sqrt(witness[2, ])
+  }
+
+  data %>%
+    select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
+}
+
 run_simulation <- function(N, seed, d, dgp = "nothing", num_trees = 1e3, ci_group_size = 5, witness_type = "original") {
   write(glue::glue("{date()} N = {N}, seed = {seed}, dgp = {dgp}"), file = glue::glue("/gpfs/scratch/susmah01/causal_drf_paper/logs/log-{Sys.getpid()}.txt"), append = TRUE)
 
@@ -99,60 +202,21 @@ run_simulation <- function(N, seed, d, dgp = "nothing", num_trees = 1e3, ci_grou
     truth <- confounding_truth
   }
 
-  X <- as.matrix(select(dat, starts_with("X")))
-  Y <- matrix(dat$Y, ncol = 1)
-  W <- as.matrix(dat$W)
-  fit <- drf_causal(X, Y, W, splitting.rule = "CausalEffectFourierMMD", num.trees = num_trees, ci.group.size = ci_group_size, num.threads = 5, response.scaling = FALSE)
-  print(fit$bandwidth)
+  dat$index <- 1:nrow(dat)
 
-  #ghat_fit <- glm(W ~ X, family = binomial(link = "logit"))
-  #ghat <- predict(ghat_fit, type = "response")
-  #ghat <- ifelse(dat$W == 1, 1 / ghat, 1 / (1 - ghat))
+  Xtest <- matrix(c(0.7, 0.3, 0.5, 0.68, 0.43), nrow = 1)
 
-  w0 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(0, N), ncol = 1), g = rep(1, nrow(dat)))
-  w1 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(1, N), ncol = 1), g = rep(1, nrow(dat)))
+  # Our method
+  combined <- drf_combined(dat, num_trees, Xtest, ci_group_size, witness_type)
+  combined$truth <- truth(dat$Y)
 
-  #w0_ghat <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(0, N), ncol = 1), g = ghat)
-  #w1_ghat <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(1, N), ncol = 1), g = ghat)
+  # Separate fits
+  separate <- drf_separate(dat, num_trees, Xtest, ci_group_size)
+  separate$truth <- truth(dat$Y)
 
-  dat$Yhat0 <- (as.matrix(w0) %*% Y)[,1]
-  dat$Yhat1 <- (as.matrix(w1) %*% Y)[,1]
-  dat$cate_hat <- dat$Yhat1 - dat$Yhat0
-
-  #dat$Yhat0_ghat <- (as.matrix(w0_ghat) %*% Y)[,1]
-  #dat$Yhat1_ghat <- (as.matrix(w1_ghat) %*% Y)[,1]
-  #dat$cate_ghat <- dat$Yhat1_ghat - dat$Yhat0_ghat
-
-  #witness <- predict_witness(fit)
-  if(witness_type == "original") {
-    Xtest <- matrix(c(0.7, 0.3, 0.5, 0.68, 0.43), nrow = 1)
-    witness <- predict_witness_orig(fit, alpha = 0.05, newdata = Xtest, newtreatment = matrix(1), g = rep(1, nrow(dat)))
-    #witness_ghat <- predict_witness_orig(fit, alpha = 0.05, g = ghat)
-
-    dat$witness <- witness[1,]
-    dat$lower <- witness[2, ]
-    dat$upper <- witness[3, ]
-
-    #dat$witness_ghat <- witness_ghat[1,]
-    #dat$lower_ghat <- witness_ghat[2, ]
-    #dat$upper_ghat <- witness_ghat[3, ]
-  }
-  else {
-    witness <- predict_witness(fit, alpha = 0.05, g = rep(1, nrow(dat)))
-    #witness_ghat <- predict_witness(fit, alpha = 0.05, g = ghat)
-
-    dat$witness <- witness[1,]
-    dat$lower <- witness[1,] + qnorm(0.025) * sqrt(witness[2, ])
-    dat$upper <- witness[1,] + qnorm(0.975) * sqrt(witness[2, ])
-
-    #dat$witness_ghat <- witness_ghat[1,]
-    #dat$lower_ghat <- witness_ghat[1,] + qnorm(0.025) * sqrt(witness_ghat[2,])
-    #dat$upper_ghat <- witness_ghat[1,] + qnorm(0.975) * sqrt(witness_ghat[2,])
-  }
-  
-  dat$truth <- truth(dat$Y)
-
-  dat
+  bind_rows(
+    cbind(dat, combined) %>% mutate(method = "Combined"),
+    cbind(dat, separate) %>% mutate(method = "Separate")
+  )
 }
-
 
