@@ -80,7 +80,7 @@ effect_truth <- get_truth(simulate_effect, 8e3, 5, y = y, Xtest = Xtest)
 both_truth <- get_truth(simulate_both, 8e3, 5, y = y, Xtest = Xtest)
 
 run_simulation <- function(N, seed, d, dgp = "nothing", num_trees = 1e3, ci_group_size = 5, witness_type = "original") {
-  write(glue::glue("{date()} N = {N}, seed = {seed}, dgp = {dgp}"), file = "log.txt", append = TRUE)
+  write(glue::glue("{date()} N = {N}, seed = {seed}, dgp = {dgp}"), file = glue::glue("/gpfs/scratch/susmah01/causal_drf_paper/logs/log-{Sys.getpid()}.txt"), append = TRUE)
 
   if(dgp == "nothing") {
     dat <- simulate_nothing(N, d, seed = seed)
