@@ -82,7 +82,7 @@ both_truth <- get_truth(simulate_both, 8e3, 5, y = y, Xtest = Xtest)
 source("https://raw.githubusercontent.com/JeffNaef/drfinference/874156b191d77b212c835cdf6f2ad9718a1ed9d2/drf-foo.R")
 
 drf_separate <- function(data, num_trees, Xtest, ci_group_size) {
-  B <- 100
+  B <- floor(num_trees / ci_group_size)
   X <- as.matrix(select(data, starts_with("X")))
   Y <- matrix(data$Y, ncol = 1)
   W <- as.matrix(data$W)
@@ -90,11 +90,11 @@ drf_separate <- function(data, num_trees, Xtest, ci_group_size) {
   DRF0 <-
     drfCI(X = X[W == 0, , drop = FALSE],
           Y = Y[W == 0, , drop = FALSE],
-          B = B, num.trees = ci_group_size)
+          B = B, num.trees = ci_group_size, num.threads = 2)
   DRF1 <-
     drfCI(X = X[W == 1, , drop = FALSE],
           Y = Y[W == 1, , drop = FALSE],
-          B = B, num.trees = ci_group_size)
+          B = B, num.trees = ci_group_size, num.threads = 2)
   # predict the DRFs on testdata x
   DRFpred0 <- predictdrf(DRF0, x = Xtest)
   DRFpred1 <- predictdrf(DRF1, x = Xtest)
@@ -103,16 +103,16 @@ drf_separate <- function(data, num_trees, Xtest, ci_group_size) {
   bandwidth_Y <- drf:::medianHeuristic(data$Y)
   k_Y <- rbfdot(sigma = bandwidth_Y)
 
-  DRFpred0_all <- predictdrf(DRF0, x = X)
-  DRFpred1_all <- predictdrf(DRF1, x = X)
+  #DRFpred0_all <- predictdrf(DRF0, x = X)
+  #DRFpred1_all <- predictdrf(DRF1, x = X)
 
   K1 <- kernelMatrix(k_Y, Y[W == 1], y = Y[W == 1])
   K0 <- kernelMatrix(k_Y, Y[W == 0], y = Y[W == 0])
   K <- kernelMatrix(k_Y, Y[W == 0], y = Y[W == 1])
 
-  data$Yhat0 <- (as.matrix(DRFpred0_all$weights) %*% Y[W == 0, 1])[,1]
-  data$Yhat1 <- (as.matrix(DRFpred1_all$weights) %*% Y[W == 1, 1])[,1]
-  data$cate_hat <- data$Yhat1 - data$Yhat0
+  #data$Yhat0 <- (as.matrix(DRFpred0_all$weights) %*% Y[W == 0, 1])[,1]
+  #data$Yhat1 <- (as.matrix(DRFpred1_all$weights) %*% Y[W == 1, 1])[,1]
+  #data$cate_hat <- data$Yhat1 - data$Yhat0
 
   # simulated null distribution
   nulldist <- sapply(seq_len(length(DRFpred1$weightsb)), function(j) {
@@ -141,8 +141,8 @@ drf_separate <- function(data, num_trees, Xtest, ci_group_size) {
   data$lower <- data$witness - sqrt(right_quantile)
   data$upper <- data$witness + sqrt(right_quantile)
 
-  data %>%
-    select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
+  #data %>% select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
+  data %>% select(witness, lower, upper)
 }
 
 drf_combined <- function(data, num_trees, Xtest, ci_group_size, witness_type) {
@@ -152,15 +152,15 @@ drf_combined <- function(data, num_trees, Xtest, ci_group_size, witness_type) {
   N <- nrow(data)
 
   # Combined fit
-  fit <- drf_causal(X, Y, W, splitting.rule = "CausalEffectFourierMMD", num.trees = num_trees, ci.group.size = ci_group_size, num.threads = 5, response.scaling = FALSE)
+  fit <- drf_causal(X, Y, W, splitting.rule = "CausalEffectFourierMMD", num.trees = num_trees, ci.group.size = ci_group_size, num.threads = 2, response.scaling = FALSE)
   print(fit$bandwidth)
 
-  w0 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(0, N), ncol = 1), g = rep(1, N))
-  w1 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(1, N), ncol = 1), g = rep(1, N))
+  #w0 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(0, N), ncol = 1), g = rep(1, N))
+  #w1 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(1, N), ncol = 1), g = rep(1, N))
 
-  data$Yhat0 <- (as.matrix(w0) %*% Y)[,1]
-  data$Yhat1 <- (as.matrix(w1) %*% Y)[,1]
-  data$cate_hat <- data$Yhat1 - data$Yhat0
+  #data$Yhat0 <- (as.matrix(w0) %*% Y)[,1]
+  #data$Yhat1 <- (as.matrix(w1) %*% Y)[,1]
+  #data$cate_hat <- data$Yhat1 - data$Yhat0
 
   if(witness_type == "original") {
     Xtest <- matrix(c(0.7, 0.3, 0.5, 0.68, 0.43), nrow = 1)
@@ -178,8 +178,8 @@ drf_combined <- function(data, num_trees, Xtest, ci_group_size, witness_type) {
     data$upper   <- witness[1,] + qnorm(0.975) * sqrt(witness[2, ])
   }
 
-  data %>%
-    select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
+  #data %>% select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
+  data %>% select(witness, lower, upper)
 }
 
 run_simulation <- function(N, seed, d, dgp = "nothing", num_trees = 1e3, ci_group_size = 5, witness_type = "original") {
