@@ -83,7 +83,7 @@ source("https://raw.githubusercontent.com/JeffNaef/drfinference/874156b191d77b21
 
 drf_separate <- function(data, num_trees, Xtest, ci_group_size) {
   B <- floor(num_trees / ci_group_size)
-  X <- as.matrix(select(data, starts_with("X")))
+  X <- as.matrix(dplyr::select(data, starts_with("X")))
   Y <- matrix(data$Y, ncol = 1)
   W <- as.matrix(data$W)
 
@@ -95,13 +95,21 @@ drf_separate <- function(data, num_trees, Xtest, ci_group_size) {
     drfCI(X = X[W == 1, , drop = FALSE],
           Y = Y[W == 1, , drop = FALSE],
           B = B, num.trees = ci_group_size, num.threads = 2)
+  
+  for (j in 1:length(DRF0$DRFlist)){
+    
+    DRF0$DRFlist[[j]]$DRF$causal<-FALSE
+    DRF1$DRFlist[[j]]$DRF$causal<-FALSE
+  }
+  
+  
   # predict the DRFs on testdata x
   DRFpred0 <- predictdrf(DRF0, x = Xtest)
   DRFpred1 <- predictdrf(DRF1, x = Xtest)
 
   # kernel
   bandwidth_Y <- drf:::medianHeuristic(data$Y)
-  k_Y <- rbfdot(sigma = bandwidth_Y)
+  k_Y <- rbfdot(sigma = 1/(2*bandwidth_Y^2))
 
   #DRFpred0_all <- predictdrf(DRF0, x = X)
   #DRFpred1_all <- predictdrf(DRF1, x = X)
@@ -142,17 +150,17 @@ drf_separate <- function(data, num_trees, Xtest, ci_group_size) {
   data$upper <- data$witness + sqrt(right_quantile)
 
   #data %>% select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
-  data %>% select(witness, lower, upper)
+  data %>% dplyr::select(witness, lower, upper)
 }
 
-drf_combined <- function(data, num_trees, Xtest, ci_group_size, witness_type) {
-  X <- as.matrix(select(data, starts_with("X")))
+drf_combined <- function(data, num_trees, Xtest, ci_group_size, witness_type="original") {
+  X <- as.matrix(dplyr::select(data, starts_with("X")))
   Y <- matrix(data$Y, ncol = 1)
   W <- as.matrix(data$W)
   N <- nrow(data)
 
   # Combined fit
-  fit <- drf_causal(X, Y, W, splitting.rule = "CausalEffectFourierMMD", num.trees = num_trees, ci.group.size = ci_group_size, num.threads = 2, response.scaling = FALSE)
+  fit <- drf(X, Y, W, num.trees = num_trees, ci.group.size = ci_group_size, num.threads = 2, response.scaling = FALSE)
   print(fit$bandwidth)
 
   #w0 <- get_causal_sample_weights(fit, newdata = X, newtreatment = matrix(rep(0, N), ncol = 1), g = rep(1, N))
@@ -162,24 +170,24 @@ drf_combined <- function(data, num_trees, Xtest, ci_group_size, witness_type) {
   #data$Yhat1 <- (as.matrix(w1) %*% Y)[,1]
   #data$cate_hat <- data$Yhat1 - data$Yhat0
 
-  if(witness_type == "original") {
+ # if(witness_type == "original") {
     Xtest <- matrix(c(0.7, 0.3, 0.5, 0.68, 0.43), nrow = 1)
-    witness <- predict_witness_orig(fit, alpha = 0.05, newdata = Xtest, newtreatment = matrix(1), g = rep(1, N))
+    witness <- predict_witness(fit, alpha = 0.05, newdata = Xtest, newtreatment = matrix(1), g = rep(1, N))
 
     data$witness <- witness[1,]
     data$lower   <- witness[2, ]
     data$upper   <- witness[3, ]
-  }
-  else {
-    witness <- predict_witness(fit, alpha = 0.05, g = rep(1, nrow(dat)))
+  # }
+  # else {
+  #   witness <- predict_witness(fit, alpha = 0.05, g = rep(1, nrow(dat)))
+  # 
+  #   data$witness <- witness[1,]
+  #   data$lower   <- witness[1,] + qnorm(0.025) * sqrt(witness[2, ])
+  #   data$upper   <- witness[1,] + qnorm(0.975) * sqrt(witness[2, ])
+  # }
 
-    data$witness <- witness[1,]
-    data$lower   <- witness[1,] + qnorm(0.025) * sqrt(witness[2, ])
-    data$upper   <- witness[1,] + qnorm(0.975) * sqrt(witness[2, ])
-  }
-
-  #data %>% select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
-  data %>% select(witness, lower, upper)
+  #data %>% dplyr::select(Yhat0, Yhat1, cate_hat, witness, lower, upper)
+  data %>% dplyr::select(witness, lower, upper)
 }
 
 run_simulation <- function(N, seed, d, dgp = "nothing", num_trees = 1e3, ci_group_size = 5, witness_type = "original") {
