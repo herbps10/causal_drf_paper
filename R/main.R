@@ -23,7 +23,7 @@ set.seed(10)
 #run <- c("toy_examples","simulation_illustration" , "wage", "lalonde", "pension")
 run<-"toy_examples"
 
-
+### First the new package version on https://github.com/herbps10/drf/tree/causal-clean needs to be installed (!), see Readme ####
 
 
 
