@@ -35,21 +35,24 @@ if ("toy_examples" %in% run){
 ######################
 #####Toy Examples #######
 ######################
-n<-1000
+n<-500
 p<-5
 
+
+Wtrain<- matrix(sample(c(0,1), size=n, prob=c(0.5,0.5), replace=T)) #matrix(c(rep(0,n/2), rep(1,n/2)))
 
 Xtrain<-matrix(  runif(n=n*p) +2, nrow=n, ncol=p    )
 
 
-Ytrain0 <-matrix(rnorm(n=n/2))
+Ytrain0 <- matrix(rnorm(n=sum(Wtrain==0))) #matrix(rnorm(n=n/2))
 
-Ytrain1<-matrix(rnorm(n=n/2))
-Ytrain2<-matrix(rnorm(n=n/2, mean=Xtrain[,1]))
-Ytrain3<-matrix(rnorm(n=n/2, sd=sqrt(1/Xtrain[,1]^2)))
-Ytrain4<-matrix(rnorm(n=n/2, mean=Xtrain, sd=sqrt(Xtrain[,1]^2)))
+Ytrain1<-matrix(rnorm(n=sum(Wtrain==1))) #matrix(rnorm(n=n/2))
+Ytrain2<-matrix(rnorm(n=sum(Wtrain==1), mean=Xtrain[,1])) #matrix(rnorm(n=n/2, mean=Xtrain[,1]))
+Ytrain3<-matrix(rnorm(n=sum(Wtrain==1), sd=sqrt(1/Xtrain[,1]^2))) #matrix(rnorm(n=n/2, sd=sqrt(1/Xtrain[,1]^2)))
+Ytrain4<-matrix(rnorm(n=sum(Wtrain==1), mean=Xtrain, sd=sqrt(Xtrain[,1]^2)))#matrix(rnorm(n=n/2, mean=Xtrain, sd=sqrt(Xtrain[,1]^2)))
 
-Wtrain<-matrix(c(rep(0,n/2), rep(1,n/2)))
+Wtrain<-matrix(sort(Wtrain))
+
 
 fit1 <- drf(X=Xtrain, Y=rbind(Ytrain0,Ytrain1), W=Wtrain, num.trees = 3000, ci.group.size = 100)
 fit2 <- drf(X=Xtrain, Y=rbind(Ytrain0,Ytrain2), W=Wtrain, num.trees = 3000, ci.group.size = 100)
@@ -251,6 +254,37 @@ p2<-tibble(
 grid.arrange(p1, p2, ncol = 2)
 
 ### Plot 4: Mean+ Variance effect ######
+
+
+#####Study behavior of two separate DRFs###
+Y1<-Ytrain1
+
+fitDRF0 <- drf(X=Xtrain[Wtrain==0,], Y=Ytrain0, num.trees = 3000, ci.group.size = 100)
+fitDRF1 <- drf(X=Xtrain[Wtrain==1,], Y=Y1, num.trees = 3000, ci.group.size = 100)
+
+W0<-predict(fitDRF0, newdata=x)
+
+data<-data.frame(W=Wtrain, X=Xtrain, Y=rbind(Ytrain0,Y1))
+
+res<-drf_separate(data, num_trees=3000, Xtest=x, ci_group_size=100)
+
+
+psep<-tibble(
+  Y     = c(Ytrain0,Y1),
+  w     = res$witness,
+  lower = res$lower,
+  upper = res$upper
+) %>%
+  ggplot(aes(x = Y, y = w)) +
+  geom_line() +
+  geom_hline(yintercept = 0, size = 1.5)+
+  geom_line(aes(y = lower), lty = 2) +
+  geom_line(aes(y = upper), lty = 2)
+
+
+grid.arrange(psep,pjoint , ncol = 2)
+
+
 
 }
 

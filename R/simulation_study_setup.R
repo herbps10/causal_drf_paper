@@ -60,7 +60,7 @@ simulate_nothing <- function(N, d, seed = 1, Xtest = NULL) {
 get_truth <- function(simulator, N, d, y, Xtest = NULL) {
   data <- simulator(N, d, seed = 23553, Xtest = Xtest)
   bandwidth_Y <- drf:::medianHeuristic(data$Y)
-  k_Y <- kernlab::rbfdot(sigma = bandwidth_Y)
+  k_Y <- kernlab::rbfdot(sigma = 1/(2*bandwidth_Y^2))
 
   K1_mean <-
     kernelMatrix(k_Y, data$Y1, y = y) %>%
