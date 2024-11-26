@@ -14,10 +14,10 @@ Follow these steps to install the required version of the `drf` package:
 The development version can be installed from github
 
 ```R
-devtools::install_github("herbps10/drf/causal-clean",subdir = "r-package/drf")
+devtools::install_github("herbps10/drf", subdir = "r-package/drf", ref = "causal-clean")
 ```
 
-For this one may clone the repo, and then within the r-package folder run
+Another installation possibility is to clone the repo, and then within the r-package folder run
 
 ```R
 Rscript build_package.R
