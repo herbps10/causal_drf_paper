@@ -15,7 +15,7 @@ library(Hmisc)
 library(gridExtra)
 library(designmatch)
 
-source("compute_causaldrf_vimp.R")
+#source("compute_causaldrf_vimp.R")
 
 set.seed(10)
 
@@ -35,7 +35,7 @@ if ("toy_examples" %in% run){
 ######################
 #####Toy Examples #######
 ######################
-n<-500
+n<-1000
 p<-5
 
 
@@ -88,11 +88,11 @@ data <- rbind(data1, data2)
 p1<-ggplot() +
   geom_line(data = data1, aes(x = x, y = density), color = "blue", size = 1.5) +
   geom_line(data = data2, aes(x = x, y = density), color = "red", size = 1.5) +
-  labs(title = "", x = "X", y = "Density") +
+  labs(title = "", x = "Y", y = "Density") +
   scale_color_manual(values = c("blue", "red")) +
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 14),  # Increase axis title size
+    axis.title = element_text(size = 30),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
@@ -109,7 +109,19 @@ p2<-tibble(
   geom_line() +
   geom_hline(yintercept = 0, size = 1.5)+
   geom_line(aes(y = lower), lty = 2) +
-  geom_line(aes(y = upper), lty = 2)
+  geom_line(aes(y = upper), lty = 2) + 
+  labs(title = "", x = "Y", y = "Witness")+
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 12)    # Increase axis text size
+  )
+
+grid.arrange(p1, p2, ncol = 2)
+
+g <- grid.arrange(p1, p2, ncol = 2)
+ggsave("Example1.png", g, width = 12, height = 6, dpi = 300)
+
 
 grid.arrange(p1, p2, ncol = 2)
 
@@ -134,11 +146,11 @@ data <- rbind(data1, data2)
 p1<-ggplot() +
   geom_line(data = data1, aes(x = x, y = density), color = "blue", size = 1.5) +
   geom_line(data = data2, aes(x = x, y = density), color = "red", size = 1.5) +
-  labs(title = "", x = "X", y = "Density") +
+  labs(title = "", x = "Y", y = "Density") +
   scale_color_manual(values = c("blue", "red")) +
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 14),  # Increase axis title size
+    axis.title = element_text(size = 30),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
@@ -155,9 +167,18 @@ p2<-tibble(
   geom_line() +
   geom_hline(yintercept = 0, size = 1.5)+
   geom_line(aes(y = lower), lty = 2) +
-  geom_line(aes(y = upper), lty = 2)
+  geom_line(aes(y = upper), lty = 2) + 
+  labs(title = "", x = "Y", y = "Witness")+
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 12)    # Increase axis text size
+  )
 
 grid.arrange(p1, p2, ncol = 2)
+
+g <- grid.arrange(p1, p2, ncol = 2)
+ggsave("Example2.png", g, width = 12, height = 6, dpi = 300)
 
 ### Plot 2: Mean effect ######
 
@@ -181,11 +202,11 @@ data <- rbind(data1, data2)
 p1<-ggplot() +
   geom_line(data = data1, aes(x = x, y = density), color = "blue", size = 1.5) +
   geom_line(data = data2, aes(x = x, y = density), color = "red", size = 1.5) +
-  labs(title = "", x = "X", y = "Density") +
+  labs(title = "", x = "Y", y = "Density") +
   scale_color_manual(values = c("blue", "red")) +
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 14),  # Increase axis title size
+    axis.title = element_text(size = 30),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
@@ -202,10 +223,18 @@ p2<-tibble(
   geom_line() +
   geom_hline(yintercept = 0, size = 1.5)+
   geom_line(aes(y = lower), lty = 2) +
-  geom_line(aes(y = upper), lty = 2)
-
+  geom_line(aes(y = upper), lty = 2)+
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 12)    # Increase axis text size
+  )
 
 grid.arrange(p1, p2, ncol = 2)
+
+g <- grid.arrange(p1, p2, ncol = 2)
+ggsave("Example3.png", g, width = 12, height = 6, dpi = 300)
+
 
 ### Plot 3: Variance effect ######
 
@@ -228,11 +257,11 @@ data <- rbind(data1, data2)
 p1<-ggplot() +
   geom_line(data = data1, aes(x = x, y = density), color = "blue", size = 1.5) +
   geom_line(data = data2, aes(x = x, y = density), color = "red", size = 1.5) +
-  labs(title = "", x = "X", y = "Density") +
+  labs(title = "", x = "Y", y = "Density") +
   scale_color_manual(values = c("blue", "red")) +
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 14),  # Increase axis title size
+    axis.title = element_text(size = 30),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
@@ -249,41 +278,52 @@ p2<-tibble(
   geom_line() +
   geom_hline(yintercept = 0, size = 1.5)+
   geom_line(aes(y = lower), lty = 2) +
-  geom_line(aes(y = upper), lty = 2)
+  geom_line(aes(y = upper), lty = 2)+
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 12)    # Increase axis text size
+  )
+
+grid.arrange(p1, p2, ncol = 2)
+
+g <- grid.arrange(p1, p2, ncol = 2)
+ggsave("Example4.png", g, width = 12, height = 6, dpi = 300)
+
 
 grid.arrange(p1, p2, ncol = 2)
 
 ### Plot 4: Mean+ Variance effect ######
 
 
-#####Study behavior of two separate DRFs###
-Y1<-Ytrain1
-
-fitDRF0 <- drf(X=Xtrain[Wtrain==0,], Y=Ytrain0, num.trees = 3000, ci.group.size = 100)
-fitDRF1 <- drf(X=Xtrain[Wtrain==1,], Y=Y1, num.trees = 3000, ci.group.size = 100)
-
-W0<-predict(fitDRF0, newdata=x)
-
-data<-data.frame(W=Wtrain, X=Xtrain, Y=rbind(Ytrain0,Y1))
-
-res<-drf_separate(data, num_trees=3000, Xtest=x, ci_group_size=100)
-
-
-psep<-tibble(
-  Y     = c(Ytrain0,Y1),
-  w     = res$witness,
-  lower = res$lower,
-  upper = res$upper
-) %>%
-  ggplot(aes(x = Y, y = w)) +
-  geom_line() +
-  geom_hline(yintercept = 0, size = 1.5)+
-  geom_line(aes(y = lower), lty = 2) +
-  geom_line(aes(y = upper), lty = 2)
-
-
-grid.arrange(psep,pjoint , ncol = 2)
-
+# #####Study behavior of two separate DRFs###
+# Y1<-Ytrain1
+# 
+# fitDRF0 <- drf(X=Xtrain[Wtrain==0,], Y=Ytrain0, num.trees = 3000, ci.group.size = 100)
+# fitDRF1 <- drf(X=Xtrain[Wtrain==1,], Y=Y1, num.trees = 3000, ci.group.size = 100)
+# 
+# W0<-predict(fitDRF0, newdata=x)
+# 
+# data<-data.frame(W=Wtrain, X=Xtrain, Y=rbind(Ytrain0,Y1))
+# 
+# res<-drf_separate(data, num_trees=3000, Xtest=x, ci_group_size=100)
+# 
+# 
+# psep<-tibble(
+#   Y     = c(Ytrain0,Y1),
+#   w     = res$witness,
+#   lower = res$lower,
+#   upper = res$upper
+# ) %>%
+#   ggplot(aes(x = Y, y = w)) +
+#   geom_line() +
+#   geom_hline(yintercept = 0, size = 1.5)+
+#   geom_line(aes(y = lower), lty = 2) +
+#   geom_line(aes(y = upper), lty = 2)
+# 
+# 
+# grid.arrange(psep,pjoint , ncol = 2)
+# 
 
 
 }
