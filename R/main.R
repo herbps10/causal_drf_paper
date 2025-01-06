@@ -92,7 +92,7 @@ p1<-ggplot() +
   scale_color_manual(values = c("blue", "red")) +
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.title = element_text(size = 25),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
@@ -113,17 +113,15 @@ p2<-tibble(
   labs(title = "", x = "Y", y = "Witness")+
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.title = element_text(size = 25),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
 grid.arrange(p1, p2, ncol = 2)
 
 g <- grid.arrange(p1, p2, ncol = 2)
-ggsave("Example1.png", g, width = 12, height = 6, dpi = 300)
+ggsave("Example1.png", g, width = 6, height = 6, dpi = 300)
 
-
-grid.arrange(p1, p2, ncol = 2)
 
 ### Plot 1: No effect ######
 
@@ -150,7 +148,7 @@ p1<-ggplot() +
   scale_color_manual(values = c("blue", "red")) +
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.title = element_text(size = 25),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
@@ -171,14 +169,14 @@ p2<-tibble(
   labs(title = "", x = "Y", y = "Witness")+
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.title = element_text(size = 25),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
 grid.arrange(p1, p2, ncol = 2)
 
 g <- grid.arrange(p1, p2, ncol = 2)
-ggsave("Example2.png", g, width = 12, height = 6, dpi = 300)
+ggsave("Example2.png", g, width = 6, height = 6, dpi = 300)
 
 ### Plot 2: Mean effect ######
 
@@ -206,7 +204,7 @@ p1<-ggplot() +
   scale_color_manual(values = c("blue", "red")) +
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.title = element_text(size = 25),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
@@ -226,14 +224,14 @@ p2<-tibble(
   geom_line(aes(y = upper), lty = 2)+
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.title = element_text(size = 25),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
 grid.arrange(p1, p2, ncol = 2)
 
 g <- grid.arrange(p1, p2, ncol = 2)
-ggsave("Example3.png", g, width = 12, height = 6, dpi = 300)
+ggsave("Example3.png", g, width = 6, height = 6, dpi = 300)
 
 
 ### Plot 3: Variance effect ######
@@ -261,7 +259,7 @@ p1<-ggplot() +
   scale_color_manual(values = c("blue", "red")) +
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.title = element_text(size = 25),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
@@ -281,17 +279,14 @@ p2<-tibble(
   geom_line(aes(y = upper), lty = 2)+
   theme_minimal() +
   theme(
-    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.title = element_text(size = 25),  # Increase axis title size
     axis.text = element_text(size = 12)    # Increase axis text size
   )
 
 grid.arrange(p1, p2, ncol = 2)
 
 g <- grid.arrange(p1, p2, ncol = 2)
-ggsave("Example4.png", g, width = 12, height = 6, dpi = 300)
-
-
-grid.arrange(p1, p2, ncol = 2)
+ggsave("Example4.png", g, width = 6, height = 6, dpi = 300)
 
 ### Plot 4: Mean+ Variance effect ######
 
